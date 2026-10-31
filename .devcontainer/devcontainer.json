@@ -1,0 +1,13 @@
+{
+  "name": "Malaak Video Maker",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "hostRequirements": { "cpus": 2 },
+  "postCreateCommand": "sudo apt-get update && sudo apt-get install -y ffmpeg imagemagick && pip install -r requirements.txt",
+  "postStartCommand": "python scripts/make_config.py && nohup python -m streamlit run webui/Main.py --server.port 8501 --server.headless true --server.address 0.0.0.0 --server.enableCORS false --server.enableXsrfProtection false --browser.gatherUsageStats false > /tmp/streamlit.log 2>&1 &",
+  "forwardPorts": [8501],
+  "portsAttributes": { "8501": { "label": "Malaak Video Maker", "onAutoForward": "openBrowser" } },
+  "secrets": {
+    "PEXELS_API_KEY": { "description": "Optional free Pexels key for stock videos" },
+    "GEMINI_API_KEY": { "description": "Optional Gemini key for AI scripts" }
+  }
+}
