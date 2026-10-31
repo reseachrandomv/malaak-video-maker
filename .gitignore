@@ -3,3 +3,7 @@ storage/
 __pycache__/
 .env
 *.pyc
+
+yt_token.json
+*.token.json
+client_secret*.json

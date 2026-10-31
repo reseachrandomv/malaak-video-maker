@@ -2233,6 +2233,26 @@ def _render_generation_task_snapshot(task_id, task):
             f"video_files={video_files}, error={exc}"
         )
 
+    if state == const.TASK_STATE_COMPLETE and available_videos:
+        try:
+            from app.services import youtube_upload as _yt
+            if _yt.enabled():
+                for _vi, _vurl in available_videos:
+                    _link = _yt.already_uploaded(_vurl)
+                    if not _link:
+                        with st.spinner("📤 Posting to YouTube..."):
+                            _link = _yt.upload(
+                                _vurl,
+                                task.get("video_subject") or "",
+                                task.get("script") or st.session_state.get("video_script") or "",
+                                os.environ.get("YT_PRIVACY", "public"),
+                            )
+                    st.success(f"📺 Posted to YouTube: {_link}")
+                    st.markdown(f"[▶️ Open on YouTube]({_link})")
+            else:
+                st.info("YouTube not connected. Run the YouTube sign-in cell in Colab to auto-post.")
+        except Exception as _exc:
+            st.error(f"YouTube upload failed: {_exc}")
     _render_generation_logs(task_id)
     if (
         state == const.TASK_STATE_COMPLETE
