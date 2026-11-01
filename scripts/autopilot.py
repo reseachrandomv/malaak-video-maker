@@ -1,5 +1,5 @@
 """Autopilot: make and auto-post N videos in a row (run from the Colab notebook)."""
-import json, os, random, re, sys, uuid
+import json, os, random, re, subprocess, sys, uuid
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, root); os.chdir(root)
 from app.models.schema import VideoParams, VideoAspect
@@ -27,7 +27,25 @@ def pick_topics(n, used):
                            "The discovery of Tutankhamun's tomb", "Juliane Koepcke's survival story"]) for _ in range(n)]
 
 
-def run(n=3, topics=None, voice="en-US-GuyNeural-Male", privacy="public"):
+def add_watermark(video, text="@Mnijeongggguk", image=""):
+    """Stamp Malaak's watermark (her logo image if given, else her channel handle) bottom-right."""
+    out = video[:-4] + "_wm.mp4"
+    if image and os.path.isfile(image):
+        vf = ["-i", image, "-filter_complex",
+              "[1:v][0:v]scale2ref=w=iw*0.22:h=ow/mdar[wm][v];[wm]format=rgba,colorchannelmixer=aa=0.8[w];[v][w]overlay=W-w-30:H-h-200"]
+    elif text:
+        font = os.path.join(root, "resource", "fonts", "BeVietnamPro-Bold.ttf")
+        t = text.replace(":", "\\:").replace("'", "")
+        vf = ["-vf", f"drawtext=fontfile='{font}':text='{t}':fontcolor=white@0.85:fontsize=h/32:"
+                     "borderw=3:bordercolor=black@0.6:x=w-tw-30:y=h-th-200"]
+    else:
+        return video
+    r = subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", video] + vf +
+                       ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-c:a", "copy", out])
+    return out if r.returncode == 0 and os.path.isfile(out) else video
+
+
+def run(n=3, topics=None, voice="en-US-GuyNeural-Male", privacy="public", watermark="@Mnijeongggguk", watermark_image=""):
     topics = [t.strip() for t in (topics or []) if t.strip()]
     used = []
     if len(topics) < n:
@@ -44,6 +62,7 @@ def run(n=3, topics=None, voice="en-US-GuyNeural-Male", privacy="public"):
             vids = [v for v in (res.get("videos") or []) if os.path.isfile(v)]
             if not vids:
                 print("  ❌ video failed:", res.get("error", "no video")); continue
+            vids[0] = add_watermark(vids[0], watermark, watermark_image)
             print("  ✅ made", vids[0])
             if yt.enabled():
                 print("  📤 posted:", yt.upload(vids[0], topic, script, privacy))
